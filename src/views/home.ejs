@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>DongwonMap</title>
+
+    <link rel="stylesheet" href="./css/index.css" />
+    <script type="text/javascript"
+        src="https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=az6haq9mh5 "></script>
+    <script type="text/javascript"
+        src="//dapi.kakao.com/v2/maps/sdk.js?appkey=87865112ea25b9c326a65e83e027b233&libraries=services"></script>
+</head>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"
+    integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+
+
+<body>
+    <div id="navbar">Kurly To The Moon</div>
+
+    <div id="search">
+        <input id="search_input" placeholder="목적지를 입력해주세요" />
+        <button id="search_button">
+            <i class="fas fa-search fa"></i>
+        </button>
+    </div>
+
+    <div id="current">
+        <i class="fa fa-crosshairs fa-xs"></i>
+    </div>
+
+    <div id="map" style="width:100%;height:100vh;"></div>
+
+    <script>
+        // DB 쿼리 데이터 받아와서 파싱하는 부분
+        var objList = "<%= JSON.stringify(objList)  %>";
+        objList = objList.replaceAll('&#34;', '\"');
+        objList = JSON.parse(objList);
+
+        var geocoder = new kakao.maps.services.Geocoder();
+
+        let markerLat = [];
+        let markerLng = [];
+
+        let callback = function (result, status) {
+            result = JSON.stringify(result);
+            result = result.replaceAll('&#34;', '\"');
+            result = JSON.parse(result);
+
+            if (status === kakao.maps.services.Status.OK) {
+                markerLat.push(result[0].x);
+                markerLng.push(result[0].y);
+
+            }
+        };
+
+        for (var i = 0; i < objList.length; i++) {
+
+            geocoder.addressSearch(objList[i].address_name, callback);
+        }
+
+        var mapOptions = {
+            center: new naver.maps.LatLng(37.55025967672394, 127.01957763393816),
+            zoom: 12,
+            mapTypeControl: true,
+            mapTypeControlOptions: {
+                style: naver.maps.MapTypeControlStyle.BUTTON,
+                position: naver.maps.Position.TOP_RIGHT,
+            }
+        };
+
+        var map = new naver.maps.Map('map', mapOptions);
+
+        naver.maps.Event.once(map, 'init', function () {
+            trafficLayer.setMap(map);
+        });
+
+        var markerList = [];
+        var infoWindowList = [];
+        var currentOpen;
+
+        console.log(markerLat);
+
+        for (var i = 0; i < objList.length; i++) {
+            console.log(markerLat[i]);
+            var latlng = new naver.maps.LatLng(markerLat[i], markerLng[i]);
+            //console.log(markerLat[i]);
+
+            marker = new naver.maps.Marker({
+                map: map,
+                position: latlng,
+                icon: {
+                    content: "<div class='marker'></div>",
+                    anchor: new naver.maps.Point(12, 12),
+                },
+            })
+            markerList.push(marker);
+        }
+        console.log(markerList);
+
+
+        // for (var i = 0, ii = markerList.length; i < ii; i++) {
+        //     naver.maps.Event.addListener(map, "click", ClickMap(i));
+        //     naver.maps.Event.addListener(markerList[i], "click", getClickHandler(i));
+        // }
+
+        //장소검색 바 구현
+        let ps = new kakao.maps.services.Places();
+        let search_arr = [];
+
+        $("#search_input").on("keydown", function (e) {
+            if (e.keyCode === 13) {
+                let content = $(this).val();
+                ps.keywordSearch(content, placeSearchCB);
+            }
+        });
+
+        $("#search_button").on("click", function (e) {
+            let content = $("#search_input").val();
+            ps.keywordSearch(content, placeSearchCB);
+        })
+        function placeSearchCB(data, status, pagination) {
+            if (status === kakao.maps.services.Status.OK) {
+                let target = data[0];
+                const lat = target.y;
+                const lng = target.x;
+                const latlng = new naver.maps.LatLng(lat, lng);
+                marker = new naver.maps.Marker({
+                    position: latlng,
+                    map: map
+                })
+                if (search_arr.length == 0) {
+                    search_arr.push(marker)
+                } else {
+                    search_arr.push(marker)
+                    let pre_marker = search_arr.splice(0, 1);
+                    pre_marker[0].setMap(null);
+                }
+
+                map.setZoom(14, false);
+                map.panTo(latlng);
+
+            } else {
+                alert("검색 결과 없음");
+            }
+        }
+    </script>
+    <script src="https://kit.fontawesome.com/6478f529f2.js" crossorigin="anonymous"></script>
+    <script src="https://kit.fontawesome.com/3b5864e969.js" crossorigin="anonymous"></script>
+
+
+</body>
+
+</html>
