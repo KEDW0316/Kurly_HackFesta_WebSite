@@ -14,6 +14,7 @@
     <script type="text/javascript"
         src="//dapi.kakao.com/v2/maps/sdk.js?appkey=87865112ea25b9c326a65e83e027b233&libraries=services"></script>
 </head>
+<script type="text/javascript" src="./js/MarkerClustering.js"></script>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"
     integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
@@ -36,37 +37,17 @@
     <div id="map" style="width:100%;height:100vh;"></div>
 
     <script>
-        // DB 쿼리 데이터 받아와서 파싱하는 부분
+        /**MYSQL DB 쿼리데이터 받아와서 JSON 파싱해 놓은 변수*/
         var objList = "<%= JSON.stringify(objList)  %>";
         objList = objList.replaceAll('&#34;', '\"');
         objList = JSON.parse(objList);
 
-        var geocoder = new kakao.maps.services.Geocoder();
 
-        let markerLat = [];
-        let markerLng = [];
-
-        let callback = function (result, status) {
-            result = JSON.stringify(result);
-            result = result.replaceAll('&#34;', '\"');
-            result = JSON.parse(result);
-
-            if (status === kakao.maps.services.Status.OK) {
-                markerLat.push(result[0].x);
-                markerLng.push(result[0].y);
-
-            }
-        };
-
-        for (var i = 0; i < objList.length; i++) {
-
-            geocoder.addressSearch(objList[i].address_name, callback);
-        }
-
+        /**Naver Map 띄우깅*/
         var mapOptions = {
-            center: new naver.maps.LatLng(37.55025967672394, 127.01957763393816),
+            center: new naver.maps.LatLng(37.49812596900295, 127.02805117926182),
             zoom: 12,
-            mapTypeControl: true,
+
             mapTypeControlOptions: {
                 style: naver.maps.MapTypeControlStyle.BUTTON,
                 position: naver.maps.Position.TOP_RIGHT,
@@ -75,38 +56,157 @@
 
         var map = new naver.maps.Map('map', mapOptions);
 
+
+
+        /**카카오 맵 API GEOCODER 사용 변수 */
+        var geocoder = new kakao.maps.services.Geocoder();
+
+        const searchAddress = addressName => {
+            return new Promise((resolve, reject) => {
+                geocoder.addressSearch(addressName, (result, status) => {
+                    result = JSON.stringify(result);
+                    result = result.replaceAll("&#34", "\"");
+                    result = JSON.parse(result);
+
+                    if (status === kakao.maps.services.Status.OK) {
+                        return resolve(result);
+                    }
+                    return reject();
+                })
+
+            })
+        }
+
+        let driver_color = [];
+        var markerList = [];
+        var infoWindowList = [];
+
+        async function getData() {
+            const markers = await Promise.allSettled(objList.map(o => o.address_name).map(searchAddress));
+
+            for (var i = 0; i < objList.length; i++) {
+                //드라이버 별 랜덤색상 적용
+                if (driver_color[objList[i].driver_region] == null)
+                    driver_color[objList[i].driver_region] = Math.random();
+
+                if (markers[i].status === "fulfilled") {
+                    var latlng = new naver.maps.LatLng(markers[i].value[0].y, markers[i].value[0].x);
+                    var colorCode = "#" + Math.round(driver_color[objList[i].driver_region] * 0xffffff).toString(16);
+
+                    marker = new naver.maps.Marker({
+                        map: map,
+                        position: latlng,
+                        icon: {
+                            //content: "<div class='marker'></div>",
+                            content: `<i class='fas fa-box fa-xs' style="color:${colorCode};"></i>`,
+                            anchor: new naver.maps.Point(6, 6),
+                        },
+                    })
+
+                    var info_content = `<div class='infowindow_wrap'>
+                                        <div class='infowindow_address_name'>주소 : ${objList[i].address_name}</div>
+                                        <div class='infowindow_box_number'>배달 개수 : ${objList[i].delivery_box} 개</div>
+                                        <div class='infowindow_delivery_difficulty'>배달 난이도 : ${objList[i].delivery_difficulty} 점</div>
+                                        </div>`
+
+                    var infowindow = new naver.maps.InfoWindow({
+                        content: info_content,
+                        backgroundColor: "#00ff0000",
+                        borderColor: "#00ff0000",
+                        anchorSize: new naver.maps.Size(0, 0)
+                    })
+
+                    markerList.push(marker);
+                    infoWindowList.push(infowindow);
+
+                }
+            }
+
+
+            for (var i = 0, ii = markerList.length; i < ii; i++) {
+                naver.maps.Event.addListener(map, "click", ClickMap(i));
+                naver.maps.Event.addListener(markerList[i], "click", getClickHandler(i, infoWindowList[i]));
+            }
+
+            function getClickHandler(i, infowindowContent) {
+                return function () {
+                    var marker = markerList[i];
+                    var infowindow = infowindowContent;
+
+                    if (infowindow.getMap()) {
+                        infowindow.close();
+                    } else {
+                        infowindow.open(map, marker)
+                    }
+
+                }
+            }
+
+            function ClickMap(i) {
+                return function () {
+                    var infowindow = infoWindowList[i]
+                    infowindow.close()
+                }
+            }
+        }
+
+        getData();
+
+
+
         naver.maps.Event.once(map, 'init', function () {
             trafficLayer.setMap(map);
         });
 
-        var markerList = [];
-        var infoWindowList = [];
+
+
         var currentOpen;
 
-        console.log(markerLat);
 
-        for (var i = 0; i < objList.length; i++) {
-            console.log(markerLat[i]);
-            var latlng = new naver.maps.LatLng(markerLat[i], markerLng[i]);
-            //console.log(markerLat[i]);
-
-            marker = new naver.maps.Marker({
-                map: map,
-                position: latlng,
-                icon: {
-                    content: "<div class='marker'></div>",
-                    anchor: new naver.maps.Point(12, 12),
-                },
-            })
-            markerList.push(marker);
-        }
         console.log(markerList);
+        for (var i = 0, ii = markerList.length; i < ii; i++) {
+            naver.maps.Event.addListener(map, "click", ClickMap(i));
+            naver.maps.Event.addListener(markerList[i], "click", getClickHandler(i));
+        }
 
 
-        // for (var i = 0, ii = markerList.length; i < ii; i++) {
-        //     naver.maps.Event.addListener(map, "click", ClickMap(i));
-        //     naver.maps.Event.addListener(markerList[i], "click", getClickHandler(i));
+        // 마커클러스터링 구현
+        // const cluster1 = {
+        //     content: '<div id="clus" style="cursor:pointer;width:40px;height:40px;line-height:42px;font-size:10px;color:white;text-align:center;font-weight:bold;background:url(http://61.252.59.34:31014/s/fBSYQ7tDA6oXBTS/preview);background-size:contain;" ></div> ',
+        //     size: N.Size(20, 20),
+        //     anchor: N.Point(20, 20)
+        // };
+
+        // const cluster2 = {
+        //     content: '<div id="clus" style="cursor:pointer;width:30px;height:30px;line-height:42px;font-size:10px;color:white;text-align:center;font-weight:bold;background:url(http://61.252.59.34:31014/s/fBSYQ7tDA6oXBTS/preview);background-size:contain;" ></div> ',
+        //     size: N.Size(20, 20),
+        //     anchor: N.Point(20, 20)
         // }
+
+        // const cluster3 = {
+        //     content: '<div id="clus" style="cursor:pointer;width:20px;height:20px;line-height:42px;font-size:10px;color:white;text-align:center;font-weight:bold;background:url(http://61.252.59.34:31014/s/fBSYQ7tDA6oXBTS/preview);background-size:contain;" ></div> ',
+        //     size: N.Size(20, 20),
+        //     anchor: N.Point(20, 20)
+        // }
+
+        // const MarkerClustering1 = new MarkerClustering({
+        //     minClusterSize: 2,
+        //     maxZoom: 16,
+        //     map: map,
+        //     markers: markerList,
+        //     disableClickZoom: false,
+        //     gridSize: 100,
+        //     icons: [cluster1, cluster2, cluster3],
+        //     indexGeneragor: [2, 5, 10],
+        //     stylingFunction: function (clusterMarker, count) {
+        //         //$(clusterMarker.getElement()).find('div:first-child').innerText(count);
+        //         //console.log($(clusterMarker.getElement()).find('div:first-child'));
+
+        //         document.getElementById('clus').innerText = count;
+        //         console.log(clusterMarker);
+        //     }
+
+        // })
 
         //장소검색 바 구현
         let ps = new kakao.maps.services.Places();

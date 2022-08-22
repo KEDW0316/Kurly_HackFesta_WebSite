@@ -21,6 +21,5 @@ const db = async () => {
 
 export const home = async (req, res) => {
   db();
-
   await res.render("home", { objList });
 };
