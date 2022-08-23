@@ -37,17 +37,16 @@
     </div>
 
     <div id="map" style="width:100%;height:100vh;"></div>
-    <div id="drivers">
-    </div>
+    <div id="drivers"> </div>
+    <div class="path-information" id="path-information2"> </div>
 
     <script>
 
         let polyline_driver_id = [];
+        let path_information_driver_id = [];
 
         /**드라이버 대시보드 클릭 시 각 드라이버 별 배송물품 및 경로찾기 버튼을 활성화해주는 핸들러*/
         function driver_click(driver_id) {
-            console.log("driver_click 함수 내부 driver_id : " + driver_id);
-            console.log(polyline_driver_id);
 
             var driver_dashboard_box = document.getElementById(driver_id + "box");
             var path_btn = driver_dashboard_box.childNodes[5];
@@ -62,6 +61,8 @@
                 path_btn.disabled = false;
                 $(".boxes").show();
                 $(".path-boxes").hide();
+                document.getElementById("path-information2").innerText = "";
+
             }
             /*선택 상태가 아니라면*/
             else {
@@ -89,6 +90,7 @@
                 $(`.${driver_boxes}`).show();
 
                 if (polyline_driver_id[driver_id] !== undefined) {
+                    document.getElementById("path-information2").innerText = path_information_driver_id[driver_id];
                     for (var i = 0; i < polyline_driver_id[driver_id].length; i++) {
                         polyline_driver_id[driver_id][i].setOptions('strokeOpacity', 0.8);
                         $(`.${driver_boxes}`).hide();
@@ -107,7 +109,7 @@
         /**Naver Map 띄우깅*/
         var mapOptions = {
             center: new naver.maps.LatLng(37.49906416460827, 127.06089799811663),
-            zoom: 14,
+            zoom: 15,
 
             mapTypeControlOptions: {
                 style: naver.maps.MapTypeControlStyle.BUTTON,
@@ -185,7 +187,7 @@
                         map: map,
                         position: latlng,
                         icon: {
-                            content: `<i class='fas fa-box fa-xs boxes ${driver_id}driver' style="color:${colorCode};">
+                            content: `<i class='fas fa-box fa-2x boxes ${driver_id}driver' style="color:${colorCode};">
                                 <span>${driver_id}</span></i>`,
                             anchor: new naver.maps.Point(6, 6),
                         },
@@ -349,8 +351,6 @@
             }
         }
 
-        console.log(each_driver_boxes);
-
 
         function find_opt_path(event) {
             var driver_id = event.path[0].id;
@@ -361,6 +361,7 @@
                 $(`.${driver_id}path`).show();
                 for (var i = 0; i < polyline_driver_id[driver_id].length; i++)
                     polyline_driver_id[driver_id][i].setOptions('strokeOpacity', 0.8);
+                document.getElementById("path-information2").innerText = path_information_driver_id[driver_id];
             }
             else {
 
@@ -405,10 +406,12 @@
                         var resultData = response.properties;
                         var resultFeatures = response.features;
 
-                        var tDistance = "총 거리 : " + (resultData.totalDistance / 1000).toFixed(1) + "km,  ";
-                        var tTime = "총 시간 : " + (resultData.totalTime / 60).toFixed(0) + "분,  ";
-                        var tFare = "총 요금 : " + resultData.totalFare + "원";
-                        console.log(tDistance + tTime + tFare);
+                        var tDistance = "총 거리 : " + (resultData.totalDistance / 1000).toFixed(1) + "km\n";
+                        var tTime = "총 시간 : " + (resultData.totalTime / 60).toFixed(0) + "분";
+
+                        console.log(tDistance + tTime);
+
+
 
                         /*경로 PolyLine 그리기 위한 정보 받아오기*/
                         for (var i in resultFeatures) {
@@ -431,7 +434,11 @@
                                 }
 
                                 /**경로 결과 값 반환받아 Polyline 생성*/
-                                if (polyline_driver_id[driver_id] === undefined) polyline_driver_id[driver_id] = [];
+                                if (polyline_driver_id[driver_id] === undefined) {
+                                    polyline_driver_id[driver_id] = [];
+                                    path_information_driver_id[driver_id] = tDistance + tTime;
+                                    document.getElementById("path-information2").innerText = path_information_driver_id[driver_id];
+                                }
                                 polyline_driver_id[driver_id].push(new naver.maps.Polyline({
                                     map: map,
                                     path: drawInfoArr,
@@ -445,12 +452,12 @@
                                 $(".boxes").hide();
 
                                 var startLatLng = new naver.maps.LatLng(each_driver_boxes[driver_id][0][0], each_driver_boxes[driver_id][0][1]);
-                                console.log("시작 : " + startLatLng)
+
                                 marker = new naver.maps.Marker({
                                     map: map,
                                     position: startLatLng,
                                     icon: {
-                                        content: `<i class='fas fa-box fa-xs path-boxes ${driver_id}path' style="color:black;">
+                                        content: `<i class='fas fa-box fa-2x path-boxes ${driver_id}path' style="color:black;">
                                 <span>S</span></i>`,
                                         anchor: new naver.maps.Point(6, 6),
                                     },
@@ -463,7 +470,7 @@
                                         map: map,
                                         position: midLatLng,
                                         icon: {
-                                            content: `<i class='fas fa-box fa-xs path-boxes ${driver_id}path' style="color:black; ">
+                                            content: `<i class='fas fa-box fa-2x path-boxes ${driver_id}path' style="color:black; ">
                                 <span>${i}</span></i>`,
                                             anchor: new naver.maps.Point(6, 6),
                                         },
@@ -476,7 +483,7 @@
                                     map: map,
                                     position: startLatLng,
                                     icon: {
-                                        content: `<i class='fas fa-box fa-xs path-boxes ${driver_id}path' style="color:black;">
+                                        content: `<i class='fas fa-box fa-2x path-boxes ${driver_id}path' style="color:black;">
                                 <span>E</span></i>`,
                                         anchor: new naver.maps.Point(6, 6),
                                     },
