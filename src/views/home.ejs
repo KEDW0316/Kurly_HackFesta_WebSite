@@ -13,6 +13,8 @@
         src="https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=az6haq9mh5 "></script>
     <script type="text/javascript"
         src="//dapi.kakao.com/v2/maps/sdk.js?appkey=87865112ea25b9c326a65e83e027b233&libraries=services"></script>
+    <script src="https://apis.openapi.sk.com/tmap/jsv2?version=1&appKey=l7xx807a3f4c567c469d82c23966591c94e4"></script>
+
 </head>
 <script type="text/javascript" src="./js/MarkerClustering.js"></script>
 
@@ -35,8 +37,67 @@
     </div>
 
     <div id="map" style="width:100%;height:100vh;"></div>
+    <div id="drivers">
+    </div>
 
     <script>
+
+        let polyline_driver_id = [];
+
+        /**드라이버 대시보드 클릭 시 각 드라이버 별 배송물품 및 경로찾기 버튼을 활성화해주는 핸들러*/
+        function driver_click(driver_id) {
+            console.log("driver_click 함수 내부 driver_id : " + driver_id);
+            console.log(polyline_driver_id);
+
+            var driver_dashboard_box = document.getElementById(driver_id + "box");
+            var path_btn = driver_dashboard_box.childNodes[5];
+
+            /*만약 드라이버가 선택 상태일 때 다시 클릭하면 white로 만들어주고 버튼을 disabled 시킨 후, 모든 박스 마커 보여줌*/
+            if (driver_dashboard_box.style.background === "rgba(0, 0, 0, 0.2)") {
+                if (polyline_driver_id[driver_id] !== undefined) {
+                    for (var i = 0; i < polyline_driver_id[driver_id].length; i++)
+                        polyline_driver_id[driver_id][i].setOptions('strokeOpacity', 0.0);
+                }
+                driver_dashboard_box.style.background = "white";
+                path_btn.disabled = false;
+                $(".boxes").show();
+                $(".path-boxes").hide();
+            }
+            /*선택 상태가 아니라면*/
+            else {
+                /*for문을 통해 모두 선택 해제 및 버튼 disable 후*/
+                for (var i = 1; i <= 4; i++) {
+                    var driver_dashboard_box2 = document.getElementById(i + "box");
+                    var path_btn2 = driver_dashboard_box2.childNodes[5];
+                    path_btn2.disabled = true;
+                    driver_dashboard_box2.style.background = "white";
+
+                    if (polyline_driver_id[i] !== undefined) {
+                        $(`.${i}path`).hide();
+                        for (var j = 0; j < polyline_driver_id[i].length; j++) {
+                            polyline_driver_id[i][j].setOptions('strokeOpacity', 0.0);
+                        }
+                    }
+                }
+
+
+                /*선택된 드라이버 요소 색 바꿔주고 버튼 able 시킴*/
+                var driver_boxes = driver_id + "driver";
+                driver_dashboard_box.style.background = "rgba(0, 0, 0, 0.2)";
+                path_btn.disabled = false;
+                $(".boxes").hide();
+                $(`.${driver_boxes}`).show();
+
+                if (polyline_driver_id[driver_id] !== undefined) {
+                    for (var i = 0; i < polyline_driver_id[driver_id].length; i++) {
+                        polyline_driver_id[driver_id][i].setOptions('strokeOpacity', 0.8);
+                        $(`.${driver_boxes}`).hide();
+                        $(`.${driver_id}path`).show();
+                    }
+                }
+            }
+        }
+
         /**MYSQL DB 쿼리데이터 받아와서 JSON 파싱해 놓은 변수*/
         var objList = "<%= JSON.stringify(objList)  %>";
         objList = objList.replaceAll('&#34;', '\"');
@@ -77,38 +138,68 @@
             })
         }
 
-        let driver_color = [];
+        let driver_color = ["", "#12ED8E", "#26A4FF", "#EFE417", "#FF5C2B", "#C5CBDC"];
+
+        /**각 운전기사 별 배송물품 정보 저장*/
+        let each_driver_boxes = [];
+
+        /*배열 속 배열로 초기화*/
+        for (var i = 1; i <= 5; i++)
+            each_driver_boxes[i] = [];
+
+        /**마커 전체 리스트 저장*/
         var markerList = [];
+
+        /**각 마커별 Infowindow 정보 저장*/
         var infoWindowList = [];
+
+        /**배송기사 수*/
+        let max_driver = 0;
 
         async function getData() {
             const markers = await Promise.allSettled(objList.map(o => o.address_name).map(searchAddress));
 
             for (var i = 0; i < objList.length; i++) {
-                //드라이버 별 랜덤색상 적용
-                if (driver_color[objList[i].driver_region] == null)
-                    driver_color[objList[i].driver_region] = Math.random();
+
+                var driver_id = objList[i].driver_region;
+
+                // if (driver_color[driver_id] == null)
+                //     driver_color[driver_id] = Math.random();
+
+                if (max_driver < driver_id) max_driver = driver_id;
 
                 if (markers[i].status === "fulfilled") {
-                    var latlng = new naver.maps.LatLng(markers[i].value[0].y, markers[i].value[0].x);
-                    var colorCode = "#" + Math.round(driver_color[objList[i].driver_region] * 0xffffff).toString(16);
+                    var lat = markers[i].value[0].y;
+                    var lng = markers[i].value[0].x;
+                    var markers_number = i;
+                    var latlng = new naver.maps.LatLng(lat, lng);
 
+                    /** Mysql 새 쿼리 없이 마커찍을때 운전기사 별 배송위치 분류 진행 (객체 배열)*/
+                    each_driver_boxes[driver_id].push([lat, lng, i]);
+
+                    /*드라이버 별 랜덤색상 적용*/
+                    var colorCode = driver_color[driver_id];
+
+                    /*마커 생성*/
                     marker = new naver.maps.Marker({
                         map: map,
                         position: latlng,
                         icon: {
-                            //content: "<div class='marker'></div>",
-                            content: `<i class='fas fa-box fa-xs' style="color:${colorCode};"></i>`,
+                            content: `<i class='fas fa-box fa-xs boxes ${driver_id}driver' style="color:${colorCode};">
+                                <span>${driver_id}</span></i>`,
                             anchor: new naver.maps.Point(6, 6),
                         },
                     })
 
+                    /*마커 클릭시 나오는 infowindow content 설정*/
                     var info_content = `<div class='infowindow_wrap'>
                                         <div class='infowindow_address_name'>주소 : ${objList[i].address_name}</div>
-                                        <div class='infowindow_box_number'>배달 개수 : ${objList[i].delivery_box} 개</div>
+                                        <div class='infowindow_box_number'>배달 박스 개수 : ${objList[i].delivery_box} 개</div>
                                         <div class='infowindow_delivery_difficulty'>배달 난이도 : ${objList[i].delivery_difficulty} 점</div>
+                                        <div class='infowindow_delivery_difficulty'>무게 : ${objList[i].delivery_weight / 1000}kg</div>
                                         </div>`
 
+                    /*마커 클릭시 나오는 infowindow 생성*/
                     var infowindow = new naver.maps.InfoWindow({
                         content: info_content,
                         backgroundColor: "#00ff0000",
@@ -116,18 +207,19 @@
                         anchorSize: new naver.maps.Size(0, 0)
                     })
 
+                    /*이벤트 리스너 추가를 위해 마커 리스트와 infowindow 리스트로 저장*/
                     markerList.push(marker);
                     infoWindowList.push(infowindow);
-
                 }
             }
 
-
+            /*각각 이벤트리스너 추가*/
             for (var i = 0, ii = markerList.length; i < ii; i++) {
                 naver.maps.Event.addListener(map, "click", ClickMap(i));
                 naver.maps.Event.addListener(markerList[i], "click", getClickHandler(i, infoWindowList[i]));
             }
 
+            /**마커 클릭 시 infowindow 열어주는 핸들러 함수*/
             function getClickHandler(i, infowindowContent) {
                 return function () {
                     var marker = markerList[i];
@@ -142,32 +234,40 @@
                 }
             }
 
+            /**infowindow가 열려있을 때 Map 아무곳이나 클릭하면 열린 infowindow 닫아주는 함수*/
             function ClickMap(i) {
                 return function () {
                     var infowindow = infoWindowList[i]
                     infowindow.close()
                 }
             }
+
+            /* 드라이버별 요소 추가 start*/
+            var driver_dashboard = document.getElementById('drivers');
+            var driver_divs = '';
+            for (var i = 0; i < max_driver; i++) {
+                var colorCode = driver_color[i + 1];
+                var driver_div = `<div class="driver_box" id="${i + 1}box" >
+                    <i class="fas fa-user" onclick='driver_click(${i + 1})' style="color:${colorCode};"></i>
+                    <div class="each_driver" onclick='driver_click(${i + 1})' >${i + 1}번째 드라이버</div>
+                    <button class="each_driver_button" type="button" id="${i + 1}" disabled>경로</button>
+                    </div>
+                `;
+                driver_divs = driver_divs + driver_div;
+            }
+            driver_dashboard.innerHTML = driver_divs;
+            for (var i = 0; i < max_driver; i++) {
+                let button = document.getElementById(i + 1);
+                button.addEventListener('click', find_opt_path)
+            }
+            /* 드라이버 요소 추가 end*/
+
         }
 
         getData();
 
 
 
-        naver.maps.Event.once(map, 'init', function () {
-            trafficLayer.setMap(map);
-        });
-
-
-
-        var currentOpen;
-
-
-        console.log(markerList);
-        for (var i = 0, ii = markerList.length; i < ii; i++) {
-            naver.maps.Event.addListener(map, "click", ClickMap(i));
-            naver.maps.Event.addListener(markerList[i], "click", getClickHandler(i));
-        }
 
 
         // 마커클러스터링 구현
@@ -248,6 +348,151 @@
                 alert("검색 결과 없음");
             }
         }
+
+        console.log(each_driver_boxes);
+
+
+        function find_opt_path(event) {
+            var driver_id = event.path[0].id;
+            var driver_box_number = each_driver_boxes[driver_id].length;
+
+            if (document.getElementsByClassName(`${driver_id}path`).length > 1) {
+                $(".boxes").hide();
+                $(`.${driver_id}path`).show();
+                for (var i = 0; i < polyline_driver_id[driver_id].length; i++)
+                    polyline_driver_id[driver_id][i].setOptions('strokeOpacity', 0.8);
+            }
+            else {
+
+                var headers = {};
+                headers["appKey"] = "l7xx807a3f4c567c469d82c23966591c94e4";
+
+
+                var path_obj = new Object();
+
+                /*배송물품별 경유지 요청을 위한 정보를 담은 객체 생성*/
+                path_obj.reqCoordType = "WGS84GEO";
+                path_obj.resCoordType = "EPSG3857";
+                path_obj.startName = "출발";
+                path_obj.startX = each_driver_boxes[driver_id][0][1];
+                path_obj.startY = each_driver_boxes[driver_id][0][0];
+                path_obj.startTime = "202208121314";
+                path_obj.endName = "도착";
+                path_obj.endX = each_driver_boxes[driver_id][driver_box_number - 1][1];
+                path_obj.endY = each_driver_boxes[driver_id][driver_box_number - 1][0];
+                path_obj.searchOption = "0";
+                path_obj.viaPoints = [];
+                for (var i = 1; i < driver_box_number - 1; i++) {
+                    path_obj.viaPoints.push({
+                        "viaPointId": "test" + i.toString(),
+                        "viaPointName": "test" + i.toString(),
+                        "viaX": each_driver_boxes[driver_id][i][1],
+                        "viaY": each_driver_boxes[driver_id][i][0],
+                    });
+                }
+
+                /*위에서 제작한 정보를 통해 T map api에 동적 경로 요청*/
+
+                $.ajax({
+                    type: "POST",
+                    headers: headers,
+                    url: "https://apis.openapi.sk.com/tmap/routes/routeOptimization100?version=1&format=json",
+                    async: false,
+                    contentType: "application/json",
+                    data: JSON.stringify(path_obj),
+                    /*요청 성공 시 실행*/
+                    success: function (response) {
+                        var resultData = response.properties;
+                        var resultFeatures = response.features;
+
+                        var tDistance = "총 거리 : " + (resultData.totalDistance / 1000).toFixed(1) + "km,  ";
+                        var tTime = "총 시간 : " + (resultData.totalTime / 60).toFixed(0) + "분,  ";
+                        var tFare = "총 요금 : " + resultData.totalFare + "원";
+                        console.log(tDistance + tTime + tFare);
+
+                        /*경로 PolyLine 그리기 위한 정보 받아오기*/
+                        for (var i in resultFeatures) {
+                            var geometry = resultFeatures[i].geometry;
+                            var properties = resultFeatures[i].properties;
+                            var polyline_;
+
+                            /**최적 경로 위도, 경도 정보 포함된 배열*/
+                            drawInfoArr = [];
+
+                            if (geometry.type == "LineString") {
+                                for (var j in geometry.coordinates) {
+                                    /* 경로들의 결과값(구간)들을 포인트 객체로 변환 */
+                                    var latlng = new Tmapv2.Point(geometry.coordinates[j][0], geometry.coordinates[j][1]);
+                                    /* 포인트 객체를 받아 좌표값으로 변환*/
+                                    var convertPoint = new Tmapv2.Projection.convertEPSG3857ToWGS84GEO(latlng);
+                                    /* 포인트객체의 정보로 좌표값 변환 객체로 저장*/
+                                    var convertChange = new Tmapv2.LatLng(convertPoint._lat, convertPoint._lng);
+                                    drawInfoArr.push(new naver.maps.LatLng(convertChange._lat, convertChange._lng));
+                                }
+
+                                /**경로 결과 값 반환받아 Polyline 생성*/
+                                if (polyline_driver_id[driver_id] === undefined) polyline_driver_id[driver_id] = [];
+                                polyline_driver_id[driver_id].push(new naver.maps.Polyline({
+                                    map: map,
+                                    path: drawInfoArr,
+                                    clickable: false,
+                                    strokeColor: '#5347AA',
+                                    strokeOpacity: 0.8,
+                                    strokeWeight: 3
+                                }));
+
+                                /*시작 마커 요소 "출발" 생성*/
+                                $(".boxes").hide();
+
+                                var startLatLng = new naver.maps.LatLng(each_driver_boxes[driver_id][0][0], each_driver_boxes[driver_id][0][1]);
+                                console.log("시작 : " + startLatLng)
+                                marker = new naver.maps.Marker({
+                                    map: map,
+                                    position: startLatLng,
+                                    icon: {
+                                        content: `<i class='fas fa-box fa-xs path-boxes ${driver_id}path' style="color:black;">
+                                <span>S</span></i>`,
+                                        anchor: new naver.maps.Point(6, 6),
+                                    },
+                                })
+
+                                /*경로별 마커 요소 번호 달아서 생성*/
+                                for (var i = 1; i < driver_box_number - 1; i++) {
+                                    var midLatLng = new naver.maps.LatLng(each_driver_boxes[driver_id][i][0], each_driver_boxes[driver_id][i][1]);
+                                    marker = new naver.maps.Marker({
+                                        map: map,
+                                        position: midLatLng,
+                                        icon: {
+                                            content: `<i class='fas fa-box fa-xs path-boxes ${driver_id}path' style="color:black; ">
+                                <span>${i}</span></i>`,
+                                            anchor: new naver.maps.Point(6, 6),
+                                        },
+                                    })
+                                }
+
+                                /*도착 마커 요소 "도착" 생성*/
+                                var startLatLng = new naver.maps.LatLng(each_driver_boxes[driver_id][driver_box_number - 1][0], each_driver_boxes[driver_id][driver_box_number - 1][1]);
+                                marker = new naver.maps.Marker({
+                                    map: map,
+                                    position: startLatLng,
+                                    icon: {
+                                        content: `<i class='fas fa-box fa-xs path-boxes ${driver_id}path' style="color:black;">
+                                <span>E</span></i>`,
+                                        anchor: new naver.maps.Point(6, 6),
+                                    },
+                                })
+                            }
+                        }
+                    },
+
+                    error: function (request, status, error) {
+                        console.log("code:" + request.status + "\n" + "message:" + request.responseText + "\n" + "error:" + error);
+                    }
+                })
+            }
+        };
+
+
     </script>
     <script src="https://kit.fontawesome.com/6478f529f2.js" crossorigin="anonymous"></script>
     <script src="https://kit.fontawesome.com/3b5864e969.js" crossorigin="anonymous"></script>

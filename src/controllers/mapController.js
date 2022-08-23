@@ -12,7 +12,7 @@ const db = async () => {
       password: process.env.DB_PASSWORD,
       database: "kurlyDB",
     });
-    let sql = "SELECT * FROM kurlyDB.invoice_test";
+    let sql = "SELECT * FROM kurlyDB.final_invoice";
     let [rows, fields] = await connection.query(sql);
     objLength = rows.length;
     objList = rows;
@@ -20,6 +20,6 @@ const db = async () => {
 };
 
 export const home = async (req, res) => {
-  db();
-  await res.render("home", { objList });
+  await db();
+  res.render("home", { objList });
 };

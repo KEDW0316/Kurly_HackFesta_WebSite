@@ -211,3 +211,75 @@ body {
     font-size: 10px;
     font-weight: normal;
 }
+
+/*Driver Dashboard*/
+#drivers {
+    position: absolute;
+    top: 25px;
+    right: 10px;
+    padding: 0;
+   
+    z-index: 100000;
+    background: white;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.driver_box {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding:5px;
+}
+
+.driver_box:hover {
+    background:rgba(0, 0, 0, 0.2);
+}
+
+.each_driver {
+    font-size: 10px;
+    padding: 4px;
+}
+
+.hidden_box{
+    display:none;
+}
+
+.boxes > span{
+    position:absolute; 
+    font-size:4px;
+    color:white;
+    left:3px;
+    bottom:1px;
+}
+
+.path-boxes > span{
+    /* position:absolute; */
+    font-size:4px;
+    color:black;
+    /* left:3px;
+    bottom:1px; */
+} 
+
+.boxes {
+    display:flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.path-boxes {
+    display:flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.each_driver_button{
+    
+    font-size: 6px;
+
+}
