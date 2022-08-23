@@ -376,22 +376,26 @@
                 path_obj.reqCoordType = "WGS84GEO";
                 path_obj.resCoordType = "EPSG3857";
                 path_obj.startName = "출발";
-                path_obj.startX = each_driver_boxes[driver_id][0][1];
-                path_obj.startY = each_driver_boxes[driver_id][0][0];
+                path_obj.startX = "127.12457110459299";
+                path_obj.startY = "37.474515785036274";
                 path_obj.startTime = "202208121314";
                 path_obj.endName = "도착";
-                path_obj.endX = each_driver_boxes[driver_id][driver_box_number - 1][1];
-                path_obj.endY = each_driver_boxes[driver_id][driver_box_number - 1][0];
+                path_obj.endX = "127.12457110459299";
+                path_obj.endY = "37.474515785036274";
                 path_obj.searchOption = "0";
                 path_obj.viaPoints = [];
-                for (var i = 1; i < driver_box_number - 1; i++) {
+                path_obj.deliveryAccuracy = "1"
+
+                for (var i = 0; i < driver_box_number; i++) {
                     path_obj.viaPoints.push({
                         "viaPointId": "test" + i.toString(),
                         "viaPointName": "test" + i.toString(),
                         "viaX": each_driver_boxes[driver_id][i][1],
                         "viaY": each_driver_boxes[driver_id][i][0],
+                        "id": i,
                     });
                 }
+
 
                 /*위에서 제작한 정보를 통해 T map api에 동적 경로 요청*/
 
@@ -404,6 +408,7 @@
                     data: JSON.stringify(path_obj),
                     /*요청 성공 시 실행*/
                     success: function (response) {
+                        console.log(response);
                         var resultData = response.properties;
                         var resultFeatures = response.features;
 
@@ -411,8 +416,6 @@
                         var tTime = "총 시간 : " + (resultData.totalTime / 60).toFixed(0) + "분";
 
                         console.log(tDistance + tTime);
-
-
 
                         /*경로 PolyLine 그리기 위한 정보 받아오기*/
                         for (var i in resultFeatures) {
@@ -446,46 +449,61 @@
                                     clickable: false,
                                     strokeColor: '#5347AA',
                                     strokeOpacity: 0.8,
-                                    strokeWeight: 3
+                                    strokeWeight: 3,
+                                    endIcon: 1,
+                                    startIcon: 4,
                                 }));
 
                                 /*시작 마커 요소 "출발" 생성*/
                                 $(".boxes").hide();
 
-                                var startLatLng = new naver.maps.LatLng(each_driver_boxes[driver_id][0][0], each_driver_boxes[driver_id][0][1]);
+                                var startLatLng = new naver.maps.LatLng("127.12457110459299", " 37.474515785036274");
 
                                 marker = new naver.maps.Marker({
                                     map: map,
                                     position: startLatLng,
                                     icon: {
-                                        content: `<i class='fas fa-box fa-2x path-boxes ${driver_id}path' style="color:black;">
+                                        content: `<i class='fas fa-map-marker fa-2x path-boxes ${driver_id}path' >
                                 <span>S</span></i>`,
                                         anchor: new naver.maps.Point(6, 6),
                                     },
                                 })
 
                                 /*경로별 마커 요소 번호 달아서 생성*/
-                                for (var i = 1; i < driver_box_number - 1; i++) {
+
+                                for (var i = 0; i < driver_box_number - 1; i++) {
                                     var midLatLng = new naver.maps.LatLng(each_driver_boxes[driver_id][i][0], each_driver_boxes[driver_id][i][1]);
-                                    marker = new naver.maps.Marker({
-                                        map: map,
-                                        position: midLatLng,
-                                        icon: {
-                                            content: `<i class='fas fa-box fa-2x path-boxes ${driver_id}path' style="color:black; ">
-                                <span>${i}</span></i>`,
-                                            anchor: new naver.maps.Point(6, 6),
-                                        },
-                                    })
+                                    for (var j = 0; j < response.features.length - 1; j++) {
+                                        if (path_obj.viaPoints[i].viaPointId === response.features[j].properties.viaPointId) {
+                                            console.log("i : " + i);
+                                            console.log("j : " + j);
+                                            console.log(each_driver_boxes[driver_id]);
+                                            console.log(path_obj.viaPoints[i]); //test 25
+                                            console.log(response.features[j].properties); //test 25 index 2
+                                            //console.log(response.features[j].properties)
+                                            marker = new naver.maps.Marker({
+                                                map: map,
+                                                position: midLatLng,
+                                                icon: {
+                                                    content: `<i class='fas fa-box fa-2x path-boxes ${driver_id}path' style="color:black; ">
+                                                                <span>${response.features[j].properties.index}</span>
+                                                                `,
+                                                    anchor: new naver.maps.Point(6, 6),
+                                                },
+                                            })
+                                            break;
+                                        }
+                                    }
                                 }
 
                                 /*도착 마커 요소 "도착" 생성*/
-                                var startLatLng = new naver.maps.LatLng(each_driver_boxes[driver_id][driver_box_number - 1][0], each_driver_boxes[driver_id][driver_box_number - 1][1]);
+                                var startLatLng = new naver.maps.LatLng("127.12457110459299", " 37.474515785036274");
                                 marker = new naver.maps.Marker({
                                     map: map,
                                     position: startLatLng,
                                     icon: {
-                                        content: `<i class='fas fa-box fa-2x path-boxes ${driver_id}path' style="color:black;">
-                                <span>E</span></i>`,
+                                        content: `<i class='fas fa-map-marker fa-2x path-boxes ${driver_id}path' >
+                                <span>S</span></i>`,
                                         anchor: new naver.maps.Point(6, 6),
                                     },
                                 })
