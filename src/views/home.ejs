@@ -10,10 +10,10 @@
 
     <link rel="stylesheet" href="./css/index.css" />
     <script type="text/javascript"
-        src="https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=az6haq9mh5 "></script>
+        src="https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=<%=process.env.NAVER_API_KEY%>"></script>
     <script type="text/javascript"
-        src="//dapi.kakao.com/v2/maps/sdk.js?appkey=87865112ea25b9c326a65e83e027b233&libraries=services"></script>
-    <script src="https://apis.openapi.sk.com/tmap/jsv2?version=1&appKey=l7xx807a3f4c567c469d82c23966591c94e4"></script>
+        src="//dapi.kakao.com/v2/maps/sdk.js?appkey=<%=process.env.KAKAO_API_KEY%>&libraries=services"></script>
+    <script src="https://apis.openapi.sk.com/tmap/jsv2?version=1&appKey=<%=process.env.SKT_API_KEY%>"></script>
 
 </head>
 <script type="text/javascript" src="./js/MarkerClustering.js"></script>
@@ -367,7 +367,7 @@
             else {
 
                 var headers = {};
-                headers["appKey"] = "l7xx807a3f4c567c469d82c23966591c94e4";
+                headers["appKey"] = "<%=process.env.SKT_API_KEY%>";
 
 
                 var path_obj = new Object();
