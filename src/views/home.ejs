@@ -38,8 +38,23 @@
 
     <div id="map" style="width:100%;height:100vh;"></div>
     <div id="drivers"> </div>
-    <div class="path-information" id="path-information2"> </div>
-    <div class="driver-weights-sum" id="driver-weights-sum"> </div>
+    <div class="path-information" id="path-information2">
+        <span>경로 생성 결과</span>
+    </div>
+    <div class="driver-weights-sum" id="driver-weights-sum">
+    </div>
+    <div class="tutorial-name">↓간단한 튜토리얼↓</div>
+    <div class="tutorial" id="driver-weights-sum">
+        <span>0.이것 저것 눌러보기</span>
+        <br>
+        <span>1.위 배송기사 아이콘/글자 클릭</span>
+        <br>
+        <span>2.배송물품 마킹 클릭 조회</span>
+        <br>
+        <span>3.우측의 "경로" 버튼 클릭</span>
+        <br>
+        <span>4.생성 후 최적경로 순서 조회</span>
+    </div>
 
     <style type="text/css">
         .wrap-loading {
@@ -114,7 +129,7 @@
                 path_btn.disabled = true;
                 $(".boxes").show();
                 $(".path-boxes").hide();
-                document.getElementById("path-information2").innerText = "";
+                document.getElementById("path-information2").innerText = "경로 생성 결과";
 
             }
             /*선택 상태가 아니라면*/
