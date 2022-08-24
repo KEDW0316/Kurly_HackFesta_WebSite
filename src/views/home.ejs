@@ -39,6 +39,57 @@
     <div id="map" style="width:100%;height:100vh;"></div>
     <div id="drivers"> </div>
     <div class="path-information" id="path-information2"> </div>
+    <div class="driver-weights-sum" id="driver-weights-sum"> </div>
+
+    <style type="text/css">
+        .wrap-loading {
+            /*화면 전체를 어둡게 합니다.*/
+            position: fixed;
+            left: 0;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.2);
+            /*not in ie */
+        }
+
+        .wrap-loading>div {
+            /*로딩 이미지*/
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            margin-left: -21px;
+            margin-top: -21px;
+        }
+
+        .display-none {
+            /*감추기*/
+            display: none;
+        }
+
+        .wrap-text {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: white;
+            border-radius: 5px;
+        }
+
+        .wrap-text>span {
+            font-size: 20px;
+            font-weight: bold;
+            color: black;
+        }
+    </style>
+
+    <div class="wrap-loading display-none">
+
+        <div class="wrap-text">
+            <span>경로 설정중...</span>
+            <img src="./images/27246646563AAE5317.gif" />
+        </div>
+    </div>
 
     <script>
 
@@ -145,10 +196,13 @@
 
         /**각 운전기사 별 배송물품 정보 저장*/
         let each_driver_boxes = [];
+        let each_driver_weight_sum = [];
 
         /*배열 속 배열로 초기화*/
-        for (var i = 1; i <= 5; i++)
+        for (var i = 1; i <= 5; i++) {
             each_driver_boxes[i] = [];
+            each_driver_weight_sum[i] = 0;
+        }
 
         /**마커 전체 리스트 저장*/
         var markerList = [];
@@ -165,10 +219,6 @@
             for (var i = 0; i < objList.length; i++) {
 
                 var driver_id = objList[i].driver_region;
-
-                // if (driver_color[driver_id] == null)
-                //     driver_color[driver_id] = Math.random();
-
                 if (max_driver < driver_id) max_driver = driver_id;
 
                 if (markers[i].status === "fulfilled") {
@@ -179,6 +229,7 @@
 
                     /** Mysql 새 쿼리 없이 마커찍을때 운전기사 별 배송위치 분류 진행 (객체 배열)*/
                     each_driver_boxes[driver_id].push([lat, lng, i]);
+                    each_driver_weight_sum[driver_id] += objList[i].delivery_difficulty;
 
                     /*드라이버 별 랜덤색상 적용*/
                     var colorCode = driver_color[driver_id];
@@ -215,6 +266,13 @@
                     infoWindowList.push(infowindow);
                 }
             }
+            var str_driver = '';
+            for (var i = 1; i <= 4; i++) {
+                str_driver += `드라이버 ${i} 난이도 : ${each_driver_weight_sum[i].toFixed(2)}\n`
+
+            }
+            document.getElementById("driver-weights-sum").innerText = str_driver;
+
 
             /*각각 이벤트리스너 추가*/
             for (var i = 0, ii = markerList.length; i < ii; i++) {
@@ -250,12 +308,11 @@
             var driver_divs = '';
             for (var i = 0; i < max_driver; i++) {
                 var colorCode = driver_color[i + 1];
-                var driver_div = `<div class="driver_box" id="${i + 1}box" >
+                var driver_div = `<div class="driver_box" id = "${i + 1}box" >
                     <i class="fas fa-user fa-2x" onclick='driver_click(${i + 1})' style="color:${colorCode};"></i>
                     <div class="each_driver" onclick='driver_click(${i + 1})' >${i + 1}번 배송기사</div>
                     <button class="each_driver_button" type="button" id="${i + 1}" disabled>경로</button>
-                    </div>
-                `;
+                    </div>`;
                 driver_divs = driver_divs + driver_div;
             }
             driver_dashboard.innerHTML = driver_divs;
@@ -357,9 +414,9 @@
             var driver_id = event.path[0].id;
             var driver_box_number = each_driver_boxes[driver_id].length;
 
-            if (document.getElementsByClassName(`${driver_id}path`).length > 1) {
+            if (document.getElementsByClassName(`${driver_id} path`).length > 1) {
                 $(".boxes").hide();
-                $(`.${driver_id}path`).show();
+                $(`.${driver_id} path`).show();
                 for (var i = 0; i < polyline_driver_id[driver_id].length; i++)
                     polyline_driver_id[driver_id][i].setOptions('strokeOpacity', 0.8);
                 document.getElementById("path-information2").innerText = path_information_driver_id[driver_id];
@@ -398,24 +455,29 @@
 
 
                 /*위에서 제작한 정보를 통해 T map api에 동적 경로 요청*/
+                $('.wrap-loading').removeClass('display-none');
+                function sleep(ms) {
+                    const wakeUpTime = Date.now() + ms;
+                    while (Date.now() < wakeUpTime) { }
+                }
+                sleep(1000);
 
                 $.ajax({
                     type: "POST",
                     headers: headers,
                     url: "https://apis.openapi.sk.com/tmap/routes/routeOptimization100?version=1&format=json",
-                    async: false,
+                    async: true,
                     contentType: "application/json",
                     data: JSON.stringify(path_obj),
+
                     /*요청 성공 시 실행*/
                     success: function (response) {
-                        console.log(response);
+
                         var resultData = response.properties;
                         var resultFeatures = response.features;
 
                         var tDistance = "총 거리 : " + (resultData.totalDistance / 1000).toFixed(1) + "km\n";
                         var tTime = "총 시간 : " + (resultData.totalTime / 60).toFixed(0) + "분";
-
-                        console.log(tDistance + tTime);
 
                         /*경로 PolyLine 그리기 위한 정보 받아오기*/
                         for (var i in resultFeatures) {
@@ -463,8 +525,8 @@
                                     map: map,
                                     position: startLatLng,
                                     icon: {
-                                        content: `<i class='fas fa-map-marker fa-2x path-boxes ${driver_id}path' >
-                                <span>S</span></i>`,
+                                        content: `<i class='fas fa-map-marker fa-2x path-boxes ${driver_id}path'>
+                    <span>S</span></i >`,
                                         anchor: new naver.maps.Point(6, 6),
                                     },
                                 })
@@ -475,19 +537,13 @@
                                     var midLatLng = new naver.maps.LatLng(each_driver_boxes[driver_id][i][0], each_driver_boxes[driver_id][i][1]);
                                     for (var j = 0; j < response.features.length - 1; j++) {
                                         if (path_obj.viaPoints[i].viaPointId === response.features[j].properties.viaPointId) {
-                                            console.log("i : " + i);
-                                            console.log("j : " + j);
-                                            console.log(each_driver_boxes[driver_id]);
-                                            console.log(path_obj.viaPoints[i]); //test 25
-                                            console.log(response.features[j].properties); //test 25 index 2
-                                            //console.log(response.features[j].properties)
+
                                             marker = new naver.maps.Marker({
                                                 map: map,
                                                 position: midLatLng,
                                                 icon: {
-                                                    content: `<i class='fas fa-box fa-2x path-boxes ${driver_id}path' style="color:black; ">
-                                                                <span>${response.features[j].properties.index}</span>
-                                                                `,
+                                                    content: `<i class='fas fa-box fa-2x path-boxes ${driver_id}path' style = "color:black;">
+                    <span>${response.features[j].properties.index}</span></i>`,
                                                     anchor: new naver.maps.Point(6, 6),
                                                 },
                                             })
@@ -502,13 +558,24 @@
                                     map: map,
                                     position: startLatLng,
                                     icon: {
-                                        content: `<i class='fas fa-map-marker fa-2x path-boxes ${driver_id}path' >
-                                <span>S</span></i>`,
+                                        content: `<i class='fas fa-map-marker fa-2x path-boxes ${driver_id}path'>
+                    <span>S</span></i>`,
                                         anchor: new naver.maps.Point(6, 6),
                                     },
                                 })
                             }
                         }
+                    },
+                    /*요청 중 로딩바 실행*/
+                    beforeSend: function () {
+                        $('.wrap-loading').removeClass('display-none');
+                    },
+
+                    /*요청 끝 로딩바 감추기*/
+                    complete: function () {
+
+                        $('.wrap-loading').addClass('display-none');
+
                     },
 
                     error: function (request, status, error) {
