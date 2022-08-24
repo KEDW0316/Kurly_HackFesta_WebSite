@@ -281,6 +281,7 @@ box-shadow: 5px 2px 12px 0px rgba(0,0,0,0.25);
 } 
 
 .path-start > span{
+    position:absolute; 
     color:white;
     font-size:28px;
     left:4px;
