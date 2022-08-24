@@ -456,11 +456,7 @@
 
                 /*위에서 제작한 정보를 통해 T map api에 동적 경로 요청*/
                 $('.wrap-loading').removeClass('display-none');
-                function sleep(ms) {
-                    const wakeUpTime = Date.now() + ms;
-                    while (Date.now() < wakeUpTime) { }
-                }
-                sleep(1000);
+
 
                 $.ajax({
                     type: "POST",
@@ -519,13 +515,13 @@
                                 /*시작 마커 요소 "출발" 생성*/
                                 $(".boxes").hide();
 
-                                var startLatLng = new naver.maps.LatLng("127.12457110459299", " 37.474515785036274");
+                                var startLatLng = new naver.maps.LatLng("37.474515785036274", "127.12457110459299");
 
                                 marker = new naver.maps.Marker({
                                     map: map,
                                     position: startLatLng,
                                     icon: {
-                                        content: `<i class='fas fa-map-marker fa-2x path-boxes ${driver_id}path'>
+                                        content: `<i class='fas fa-map-marker fa-2x path-start'>
                     <span>S</span></i >`,
                                         anchor: new naver.maps.Point(6, 6),
                                     },
@@ -553,16 +549,16 @@
                                 }
 
                                 /*도착 마커 요소 "도착" 생성*/
-                                var startLatLng = new naver.maps.LatLng("127.12457110459299", " 37.474515785036274");
-                                marker = new naver.maps.Marker({
-                                    map: map,
-                                    position: startLatLng,
-                                    icon: {
-                                        content: `<i class='fas fa-map-marker fa-2x path-boxes ${driver_id}path'>
-                    <span>S</span></i>`,
-                                        anchor: new naver.maps.Point(6, 6),
-                                    },
-                                })
+                                //             var startLatLng = new naver.maps.LatLng("127.12457110459299", " 37.474515785036274");
+                                //             marker = new naver.maps.Marker({
+                                //                 map: map,
+                                //                 position: startLatLng,
+                                //                 icon: {
+                                //                     content: `<i class='fas fa-map-marker fa-2x path-boxes ${driver_id}path'>
+                                // <span>S</span></i>`,
+                                //                     anchor: new naver.maps.Point(6, 6),
+                                //                 },
+                                //             })
                             }
                         }
                     },
