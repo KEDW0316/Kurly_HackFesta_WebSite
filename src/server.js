@@ -6,7 +6,7 @@ var path = require("path");
 const PORT = 4000;
 const app = express();
 
-const logger = morgan("dev");
+const logger = morgan("combined");
 
 app.set("view engine", "ejs");
 app.set("views", process.cwd() + "/src/views");
