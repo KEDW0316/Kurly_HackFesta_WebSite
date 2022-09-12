@@ -1,6 +1,4 @@
 # kurly_to_the_moon_WebSite
-## 웹 배포 링크
-http://ec2-43-200-181-174.ap-northeast-2.compute.amazonaws.com/
 
 ## 시연 이미지
 ![image](https://user-images.githubusercontent.com/53481218/186328933-9f36bffb-a13c-4bc7-9ad2-93e491303092.png)
